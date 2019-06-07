@@ -1,0 +1,265 @@
+##############################################
+### 4. Plot decision parameters as a function of reading skill  #
+rm(list = ls())
+library(ggplot2)
+library(dplyr)
+library(cowplot)
+library(ggpubr)
+library(grid)
+library(gridExtra)
+library(corrplot)
+library(gridGraphics)
+library(scales)
+
+setwd("/home/eobrien/bde/Projects/Parametric_public/Figures")
+df_full <- read.csv("../Analysis/PCA_components.csv")
+df <- df_full %>%
+  dplyr::select(c("subj_idx","read","a","sz","t","st","sv"))
+
+# Text properties
+corr_size = 6
+label_size = 18
+tick_size = 16
+y_rat = 1.0
+
+# For axis scaling
+scaleFUN <- function(x) sprintf("%.2f", x)
+
+fit <- summary(lm(read ~ a, df))
+label_text = paste0("r = ", round(sqrt(fit$r.squared),2),", \U1D631 = ", round(fit$coefficients[2,4],3))
+x_text = 105
+y_text = max(df$a) * y_rat
+
+px1 <- ggplot(df, aes(read, a)) +
+  geom_point(size = 2)+
+  geom_smooth(method = "lm", color = "black") + 
+  xlab("Reading skill") + 
+  ylab(expression(italic(a)))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text = element_text(size = tick_size),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")+
+  annotate("text",x = x_text, y = y_text, label = label_text, size = corr_size)+
+  scale_y_continuous(labels = scaleFUN)
+px1
+
+
+fit <- summary(lm(read ~ st, df))
+label_text = paste0("r = ", round(sqrt(fit$r.squared),2),", \U1D631 = ", round(fit$coefficients[2,4],3))
+y_text = max(df$st) * y_rat
+
+px2 <- ggplot(df, aes(read, st)) +
+  geom_point(size = 2)+
+  geom_smooth(method = lm, color = "black") + 
+  xlab("Reading skill") + 
+  ylab(expression(italic(st)))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text = element_text(size = tick_size),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")+
+  annotate("text",x = x_text, y = y_text, label = label_text, size = corr_size)+
+  scale_y_continuous(labels = scaleFUN)
+px2
+
+
+
+fit <- summary(lm(read ~ t, df))
+label_text = paste0("r = ", round(sqrt(fit$r.squared),2),", \U1D631 = ", round(fit$coefficients[2,4],3))
+y_text = max(df$t) * y_rat
+
+px3 <- ggplot(df, aes(read, t)) +
+  geom_point(size = 2)+
+  geom_smooth(method = lm, color = "black") + 
+  xlab("Reading skill") + 
+  ylab(expression(italic(t)))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text = element_text(size = tick_size),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")+
+  annotate("text",x = x_text, y = y_text, label = label_text, size = corr_size)+
+  scale_y_continuous(labels = scaleFUN)
+px3
+
+
+fit <- summary(lm(read ~ sz, df))
+label_text = paste0("r = ", round(sqrt(fit$r.squared),2),", \U1D631 = ", round(fit$coefficients[2,4],3))
+y_text = max(df$sz) * y_rat
+
+
+px4 <- ggplot(df, aes(read, sz)) +
+  geom_point(size = 2)+
+  geom_smooth(method = lm, color = "black") + 
+  xlab("Reading skill") + 
+  ylab(expression(italic(sz)))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text = element_text(size = tick_size),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")+
+  annotate("text",x = x_text, y = y_text, label = label_text, size = corr_size)+
+  scale_y_continuous(labels = scaleFUN)
+px4
+
+
+
+
+###########################################################################
+################ NOW MAKE THE CORRPLOT ####################################
+##########################################################################
+
+corr_mat <- df_full %>%
+  dplyr::select(c("v.6.","v.12.","v.24.","v.48.","a","sv","st","sz","t"))
+
+n_corr <- length(names(corr_mat))^2
+res1 <- cor.mtest(corr_mat, conf.level = .95)
+res1corr <-p.adjust(res1$p, method = "holm")
+res1corrsq <- matrix(res1corr, nrow = length(names(corr_mat)), ncol = length(names(corr_mat)))
+
+M <- cor(corr_mat)
+
+
+colnames(M) <- c("$italic(v)[6]","$italic(v)[12]","$italic(v)[24]","$italic(v)[48]",
+                 "$italic(a)","$italic(sv)","$italic(st)","$italic(sz)","$italic(t)")
+rownames(M) <- colnames(M)
+
+
+corrplot(M, p.mat = res1corrsq, method = "color",
+               order = "hclust",
+               insig = "label_sig", pch.col = "white", tl.col = "black", tl.cex = 1.25,
+               sig.level = c(0.001, 0.01, 0.05),
+               col = colorRampPalette(c("#2F6860","white","#682F68"))(200),
+               pch.cex = 0.9)
+
+corrRect.hclust(corr = M, k = 3, method = "ward.D",lwd = 3)
+grid.echo()
+px5 <- grid.grab()
+# save correlation matrix colors to a vector, then make coloured matrix grob transparent
+matrix.colors <- getGrob(px5 , gPath("square"), grep = TRUE)[["gp"]][["fill"]]
+px5  <- editGrob(px5 ,
+               gPath("square"), grep = TRUE,
+               gp = gpar(col = NA,
+                         fill = NA))
+# apply the saved colours to the underlying matrix grob
+px5  <- editGrob(px5 ,
+               gPath("symbols-rect-1"), grep = TRUE,
+               gp = gpar(fill = matrix.colors))
+# convert the background fill from white to transparent, while we are at it
+px5  <- editGrob(px5 ,
+               gPath("background"), grep = TRUE,
+               gp = gpar(fill = NA))
+
+
+
+
+
+####################### GROUP AVERAGES ########################
+group_df <- mutate(df_full, group = ifelse(read < 85, "Dyslexic",
+                                           ifelse(read >= 85 & dys_dx == 0, "Control",
+                                                  "Other")))%>%
+  subset(group != "Other")%>%
+  mutate(a = scale(a))
+
+pd <- position_dodge(.9) # move them .05 to the left and right
+cols <- c("#831919","#253D83")
+bar_w = 0.6 
+  
+sum_df <- group_df %>%
+  group_by(group)%>%
+  summarise(mu_v = mean(PC_M_sensory),
+            se_v = sd(PC_M_sensory)/sqrt(n()),
+            mu_ns = mean(PC_M_decision),
+            se_ns = sd(PC_M_decision)/sqrt(n()),
+            mu_a = mean(a),
+            se_a = sd(a)/sqrt(n()))
+
+
+px6 <- ggplot(sum_df, aes(group, mu_ns))+
+  geom_bar(stat= "identity", position = "dodge", aes(colour = group, fill = group),width = bar_w)+
+  scale_y_continuous(limits = c(-0.65,0.65), oob = rescale_none)+
+  scale_color_manual("Group",values = cols)+
+  scale_fill_manual("Group", values = cols)+
+  geom_errorbar(aes(ymin=mu_ns-se_ns, ymax=mu_ns + se_ns), width=.1, position = pd,size=0.75)+
+  xlab("")+
+  ylab(expression(italic(d)["comp"]))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text.y = element_text(size = tick_size),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "bottom",
+        legend.justification = 0.5)+
+  coord_fixed(ratio =3)
+px6
+
+
+
+px7 <- ggplot(sum_df, aes(group, mu_a))+
+  geom_bar(stat= "identity", position = "dodge", aes(colour = group, fill = group),width = bar_w)+
+  scale_y_continuous(limits = c(-0.65,0.65), oob = rescale_none)+
+  scale_color_manual("Group",values = cols)+
+  scale_fill_manual("Group", values = cols)+
+  geom_errorbar(aes(ymin=mu_a-se_a, ymax=mu_a + se_a), width=.1, position = pd,size=0.75)+
+  xlab("")+
+  ylab(expression(italic(a)))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text.y = element_text(size = tick_size),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 18))+
+  coord_fixed(ratio =3)
+px7
+
+px8 <- ggplot(sum_df, aes(group, mu_v))+
+  geom_bar(stat= "identity", position = "dodge", aes(colour = group, fill = group),width = bar_w)+
+  scale_y_continuous(limits = c(-0.65,0.65), oob = rescale_none)+
+  scale_color_manual("Group",values = cols)+
+  scale_fill_manual("Group", values = cols)+
+  geom_errorbar(aes(ymin=mu_v-se_v, ymax=mu_v+se_v), width=.1, position = pd,size=0.75)+
+  xlab("")+
+  ylab(expression(italic(v)["comp"]))+
+  theme(axis.title = element_text(size = label_size),
+        axis.text.y = element_text(size = tick_size),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 18))+
+  coord_fixed(ratio = 3)
+
+px8
+
+###### Get the common legend
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+mylegend<-g_legend(px6)
+
+
+marg = 0.4
+left <- grid.arrange(px1+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm")),
+                     px2+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm")),
+                     px3+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm")),
+                     px4+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm")),
+                     nrow = 2)
+
+ggsave("4_left_side.png", left, height = 7.93, width = 9)
+
+low_right <- grid.arrange(px6+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm"),
+                                                       legend.position = "none"),
+                          px7+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm"),
+                                    legend.position = "none"),
+                          px8+theme(plot.margin = unit(c(marg,marg,marg,marg),"cm"),
+                                    legend.position = "none"),
+                          nrow = 1)
+low_right_legend <- grid.arrange(low_right, mylegend, nrow = 2,heights = c(7,1))
+ggsave("4_low_right.png",low_right_legend)
+
+right <- grid.arrange(px5,
+                      low_right_legend, ncol = 1,
+                      heights = c(2,1))
+
+
+all_grid <- grid.arrange(left, right, nrow = 1, widths = c(1,0.7))
+
+
+ggsave("4_decision_parameters.png", all_grid, height = 8, width = 15)
+
