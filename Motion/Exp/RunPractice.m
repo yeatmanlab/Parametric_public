@@ -106,7 +106,7 @@ display.fixation = dots.center;
 config.nTotalTrials = 10; % 10 dummay easy trials
 
 result.response = NaN * ones(1, config.nTotalTrials);
-config.coherence = [1  1 .9 .9 .8 .8 .7 .7 .6 .6];
+config.coherence = [.9 .9 .8 .8 .7 .7 .6 .6 .5 .5];
 
 % Results structure
 result.response = NaN * ones(1,config.nTotalTrials);
