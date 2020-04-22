@@ -158,6 +158,11 @@ group_df <- mutate(df_full, group = ifelse(read < 85, "Dyslexic",
   subset(group != "Other")%>%
   mutate(a = scale(a))
 
+# T-tests: are these group differences significant?
+t.test(PC_M_sensory~group, group_df)
+t.test(PC_M_decision~group, group_df)
+t.test(a ~ group, group_df)
+
 pd <- position_dodge(.9) # move them .05 to the left and right
 cols <- c("#831919","#253D83")
 bar_w = 0.6 
